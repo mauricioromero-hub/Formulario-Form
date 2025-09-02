@@ -9,10 +9,10 @@ Sigue estos pasos para ejecutar el script de Python y crear tu formulario de Goo
 
 ## Paso 1: Instalar las librerías necesarias
 
-Abre una terminal o línea de comandos en tu computadora y ejecuta el siguiente comando para instalar las librerías de Google que el script necesita:
+Abre una terminal o línea de comandos en tu computadora y ejecuta el siguiente comando para instalar las librerías de Google que el script necesita. Usamos `python3 -m pip` para asegurarnos de que se instale para la versión correcta de Python:
 
 ```bash
-pip install google-api-python-client google-auth-oauthlib
+python3 -m pip install google-api-python-client google-auth-oauthlib
 ```
 
 ## Paso 2: Habilitar la API de Google Forms y obtener credenciales
@@ -57,10 +57,10 @@ Este es el paso más importante. Necesitas autorizar al script para que pueda cr
 
 2.  **Abre una terminal:** Navega con la terminal hasta la carpeta donde guardaste los dos archivos.
 
-3.  **Ejecuta el script:** Escribe el siguiente comando y presiona Enter.
+3.  **Ejecuta el script:** Escribe el siguiente comando y presiona Enter. En muchos sistemas modernos (como Linux o macOS), es necesario usar `python3` explícitamente.
 
     ```bash
-    python create_google_form.py
+    python3 create_google_form.py
     ```
 
 4.  **Autoriza el script:**
