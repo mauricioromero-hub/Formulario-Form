@@ -280,20 +280,25 @@ def create_form(creds):
         # Construye el servicio de la API de Google Forms
         forms_service = build("forms", "v1", credentials=creds)
 
-        # 1. Crear el formulario vacío
-        form = {"info": {"title": FORM_TITLE, "documentTitle": FORM_TITLE}}
-        created_form = forms_service.forms().create(body=form).execute()
+        # 1. Crear el formulario con el título y la descripción de la primera sección
+        first_section = SECTIONS_DATA[0]
+        form_info = {
+            "title": FORM_TITLE,
+            "documentTitle": FORM_TITLE,
+            "description": f"{first_section['title']}\n{first_section.get('description', '')}"
+        }
+        created_form = forms_service.forms().create(body={"info": form_info}).execute()
         form_id = created_form["formId"]
         print(f"Formulario '{FORM_TITLE}' creado con éxito.")
         print(f"ID del formulario: {form_id}")
 
-        # 2. Construir la lista de solicitudes para añadir items (secciones y preguntas)
+        # 2. Construir la lista de solicitudes para añadir todas las preguntas y los saltos de sección
         requests = []
-        item_index = 0
 
-        for section in SECTIONS_DATA:
-            # Añadir un salto de página para crear una nueva sección
-            if item_index > 0: # No añadir salto de página antes de la primera sección
+        # Iterar sobre todas las secciones
+        for section_index, section in enumerate(SECTIONS_DATA):
+            # Añadir un salto de página para crear una nueva sección (excepto antes de la primera)
+            if section_index > 0:
                 requests.append({
                     "createItem": {
                         "item": {
@@ -301,25 +306,11 @@ def create_form(creds):
                             "description": section.get("description", ""),
                             "pageBreakItem": {},
                         },
-                        "location": {"index": item_index},
-                    }
-                })
-                item_index += 1
-
-            # Si es la primera sección, actualiza la información del título del formulario
-            else:
-                 requests.append({
-                    "updateFormInfo": {
-                        "info": {
-                            "title": FORM_TITLE,
-                            "description": section["title"] + "\n" + section.get("description", "")
-                        },
-                        "updateMask": "info.description"
+                        "location": {"index": len(requests)}, # Append at the end
                     }
                 })
 
-
-            # Añadir las preguntas de la sección
+            # Añadir las preguntas de la sección actual
             for question_data in section["questions"]:
                 requests.append({
                     "createItem": {
@@ -329,16 +320,15 @@ def create_form(creds):
                                 "question": {
                                     "required": False,
                                     "choiceQuestion": {
-                                        "type": "RADIO",  # Opción múltiple (solo una respuesta)
+                                        "type": "RADIO",
                                         "options": [{"value": opt} for opt in question_data["options"]],
                                     },
                                 }
                             },
                         },
-                        "location": {"index": item_index},
+                        "location": {"index": len(requests)}, # Append at the end
                     }
                 })
-                item_index += 1
 
         # 3. Ejecutar la solicitud por lotes para añadir todos los items
         if requests:
@@ -346,12 +336,19 @@ def create_form(creds):
                 formId=form_id, body={"requests": requests}
             ).execute()
 
-        print(f"Se han añadido {item_index} items (secciones y preguntas) al formulario.")
+        print(f"Se han añadido {len(requests)} items (preguntas y saltos de página) al formulario.")
         print("\n¡Proceso completado!")
         print(f"Puedes ver y editar tu formulario en: {created_form['responderUri']}")
 
     except HttpError as err:
-        print(f"Ocurrió un error con la API de Google Forms: {err}")
+        # Provide more details on HttpError
+        error_details = err.reason
+        if err.content:
+            try:
+                error_details = f"{err.reason}: {err.content.decode()}"
+            except (UnicodeDecodeError, AttributeError):
+                pass
+        print(f"Ocurrió un error con la API de Google Forms: {error_details}")
     except Exception as e:
         print(f"Ocurrió un error inesperado: {e}")
 
