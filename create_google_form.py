@@ -233,7 +233,7 @@ SECTIONS_DATA = [
             },
             {
                 "text": "51. Un data engineer ha creado un grupo de SQL dedicado en Azure Synapse Analytics y necesita asegurarse de que el tiempo de inactividad de cómputo se minimice durante la noche para reducir costos. ¿Qué opción de configuración permite que el grupo se pause automáticamente después de un período de inactividad?",
-                "options": ["Configurar un WORKLOAD CLASSIFIER con IMPORTANCE = Low.", "Utilizar Azure Advisor para recomendaciones de costos.", "Activar la función de auto-pausa para el grupo de SQL dedicado en Azure Synapse Studio.", "Configurar un MIN_PERCENT_RESOURCE = 0 en el grupo de cargas de trabajo."]
+                "options": ["Configurar un WORKLOAD CLASSIFIER con IMPORTANCE = Low.", "Utilizar Azure Advisor para recomendaciones de costos.", "Activar la función de auto-pausa para el grupo de SQL dedicado en Azure Synapse Studio.", "Configurar un MIN_PERCENTAGE_RESOURCE = 0 en el grupo de cargas de trabajo."]
             },
             {
                 "text": "52. Tu equipo de seguridad requiere un aislamiento completo de los recursos para ciertas cargas de trabajo críticas que se ejecutan en un grupo de SQL dedicado de Azure Synapse Analytics, garantizando que siempre tengan una cantidad mínima de recursos disponibles, incluso bajo alta demanda del sistema. ¿Qué característica de gestión de cargas de trabajo proporciona esta capacidad?",
@@ -279,26 +279,30 @@ def create_form(creds):
     try:
         forms_service = build("forms", "v1", credentials=creds)
 
-        # 1. Crear un formulario simple solo con el título.
-        # La API solo permite establecer 'title' en la creación.
-        form_body = {"info": {"title": FORM_TITLE}}
+        # 1. Crear un formulario estableciendo title y documentTitle.
+        # La API es muy específica sobre qué se puede establecer en la creación.
+        form_body = {
+            "info": {
+                "title": FORM_TITLE,
+                "documentTitle": FORM_TITLE
+            }
+        }
         created_form = forms_service.forms().create(body=form_body).execute()
         form_id = created_form["formId"]
         print(f"Formulario base '{FORM_TITLE}' creado con éxito. ID: {form_id}")
         print("Ahora añadiendo contenido...")
 
-        # 2. Construir una única solicitud por lotes para añadir todo el contenido.
+        # 2. Construir una única solicitud por lotes para añadir todo el contenido restante.
         requests = []
 
-        # Request para actualizar la descripción y el título del documento.
+        # Request para actualizar la descripción del formulario.
         first_section = SECTIONS_DATA[0]
         requests.append({
             "updateFormInfo": {
                 "info": {
-                    "description": f"{first_section['title']}\n{first_section.get('description', '')}",
-                    "documentTitle": FORM_TITLE
+                    "description": f"{first_section['title']}\n{first_section.get('description', '')}"
                 },
-                "updateMask": "description,documentTitle"
+                "updateMask": "description"
             }
         })
 
