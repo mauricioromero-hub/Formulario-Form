@@ -233,7 +233,7 @@ SECTIONS_DATA = [
             },
             {
                 "text": "51. Un data engineer ha creado un grupo de SQL dedicado en Azure Synapse Analytics y necesita asegurarse de que el tiempo de inactividad de cómputo se minimice durante la noche para reducir costos. ¿Qué opción de configuración permite que el grupo se pause automáticamente después de un período de inactividad?",
-                "options": ["Configurar un WORKLOAD CLASSIFIER con IMPORTANCE = Low.", "Utilizar Azure Advisor para recomendaciones de costos.", "Activar la función de auto-pausa para el grupo de SQL dedicado en Azure Synapse Studio.", "Configurar un MIN_PERCENTAGE_RESOURCE = 0 en el grupo de cargas de trabajo."]
+                "options": ["Configurar un WORKLOAD CLASSIFIER con IMPORTANCE = Low.", "Utilizar Azure Advisor para recomendaciones de costos.", "Activar la función de auto-pausa para el grupo de SQL dedicado en Azure Synapse Studio.", "Configurar un MIN_PERCENT_RESOURCE = 0 en el grupo de cargas de trabajo."]
             },
             {
                 "text": "52. Tu equipo de seguridad requiere un aislamiento completo de los recursos para ciertas cargas de trabajo críticas que se ejecutan en un grupo de SQL dedicado de Azure Synapse Analytics, garantizando que siempre tengan una cantidad mínima de recursos disponibles, incluso bajo alta demanda del sistema. ¿Qué característica de gestión de cargas de trabajo proporciona esta capacidad?",
@@ -277,27 +277,34 @@ def get_credentials():
 def create_form(creds):
     """Crea el formulario de Google Forms y añade las preguntas."""
     try:
-        # Construye el servicio de la API de Google Forms
         forms_service = build("forms", "v1", credentials=creds)
 
-        # 1. Crear el formulario con el título y la descripción de la primera sección
-        first_section = SECTIONS_DATA[0]
-        form_info = {
-            "title": FORM_TITLE,
-            "documentTitle": FORM_TITLE,
-            "description": f"{first_section['title']}\n{first_section.get('description', '')}"
-        }
-        created_form = forms_service.forms().create(body={"info": form_info}).execute()
+        # 1. Crear un formulario simple solo con el título.
+        # La API solo permite establecer 'title' en la creación.
+        form_body = {"info": {"title": FORM_TITLE}}
+        created_form = forms_service.forms().create(body=form_body).execute()
         form_id = created_form["formId"]
-        print(f"Formulario '{FORM_TITLE}' creado con éxito.")
-        print(f"ID del formulario: {form_id}")
+        print(f"Formulario base '{FORM_TITLE}' creado con éxito. ID: {form_id}")
+        print("Ahora añadiendo contenido...")
 
-        # 2. Construir la lista de solicitudes para añadir todas las preguntas y los saltos de sección
+        # 2. Construir una única solicitud por lotes para añadir todo el contenido.
         requests = []
 
-        # Iterar sobre todas las secciones
+        # Request para actualizar la descripción y el título del documento.
+        first_section = SECTIONS_DATA[0]
+        requests.append({
+            "updateFormInfo": {
+                "info": {
+                    "description": f"{first_section['title']}\n{first_section.get('description', '')}",
+                    "documentTitle": FORM_TITLE
+                },
+                "updateMask": "description,documentTitle"
+            }
+        })
+
+        # Iterar sobre todas las secciones para añadir preguntas y saltos de página.
         for section_index, section in enumerate(SECTIONS_DATA):
-            # Añadir un salto de página para crear una nueva sección (excepto antes de la primera)
+            # Añadir un salto de página para crear una nueva sección (excepto antes de la primera).
             if section_index > 0:
                 requests.append({
                     "createItem": {
@@ -306,11 +313,11 @@ def create_form(creds):
                             "description": section.get("description", ""),
                             "pageBreakItem": {},
                         },
-                        "location": {"index": len(requests)}, # Append at the end
+                        "location": {"index": len(requests)},
                     }
                 })
 
-            # Añadir las preguntas de la sección actual
+            # Añadir las preguntas de la sección actual.
             for question_data in section["questions"]:
                 requests.append({
                     "createItem": {
@@ -326,17 +333,17 @@ def create_form(creds):
                                 }
                             },
                         },
-                        "location": {"index": len(requests)}, # Append at the end
+                        "location": {"index": len(requests)},
                     }
                 })
 
-        # 3. Ejecutar la solicitud por lotes para añadir todos los items
+        # 3. Ejecutar la solicitud por lotes para añadir todo.
         if requests:
             forms_service.forms().batchUpdate(
                 formId=form_id, body={"requests": requests}
             ).execute()
 
-        print(f"Se han añadido {len(requests)} items (preguntas y saltos de página) al formulario.")
+        print(f"Se han añadido {len(requests)} items (configuración, preguntas, secciones) al formulario.")
         print("\n¡Proceso completado!")
         print(f"Puedes ver y editar tu formulario en: {created_form['responderUri']}")
 
